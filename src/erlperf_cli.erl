@@ -102,7 +102,11 @@ format(Reports, Options) ->
 main(Args) ->
     Prog = #{progname => "erlperf"},
     try
-        ParsedOpts = args:parse(Args, arguments(), Prog),
+        ParsedOpts =
+            case argparse:parse(Args, arguments(), Prog) of
+                {ok, ParsedOpts0, _, _} -> ParsedOpts0;
+                {error, ParseError} -> error({args, ParseError})
+            end,
 
         Verbose = maps:get(verbose, ParsedOpts, false),
 
@@ -150,8 +154,8 @@ main(Args) ->
         io:format(Formatted)
     catch
         error:{args, Reason} ->
-            Fmt = args:format_error(Reason, arguments(), Prog),
-            format(info, "Error: ~s", [Fmt]);
+            Fmt = argparse:format_error(Reason),
+            format(info, "Error: ~s~n~s", [Fmt, argparse:help(arguments())]);
         throw:{parse, FunName, Other} ->
             format(error, "Unable to read file named '~s' (expected to contain call chain recording)~nReason: ~p\n"
                 "Did you forget to end your function with period? (dot)~n", [FunName, Other]);
@@ -301,18 +305,18 @@ arguments() ->
         arguments => [
             #{name => concurrency, short => $c, long => "-concurrency",
                 help => "number of concurrently executed runner processes",
-                type => {int, [{min, 1}, {max, 1024 * 1024 * 1024}]}},
+                type => {integer, [{min, 1}, {max, 1024 * 1024 * 1024}]}},
             #{name => sample_duration, short => $d, long => "-duration",
                 help => "single sample duration, milliseconds (1000)",
-                type => {int, [{min, 1}]}},
+                type => {integer, [{min, 1}]}},
             #{name => samples, short => $s, long => "-samples",
                 help => "minimum number of samples to collect (3)",
-                type => {int, [{min, 1}]}},
+                type => {integer, [{min, 1}]}},
             #{name => loop, short => $l, long => "-loop",
                 help => "timed mode (lower overhead) iteration count: 50, 100K, 200M, 3G"},
             #{name => warmup, short => $w, long => "-warmup",
                 help => "number of samples to skip (0)",
-                type => {int, [{min, 0}]}},
+                type => {integer, [{min, 0}]}},
             #{name => report, short => $r, long => "-report",
                 help => "report verbosity, full adds system information",
                 type => {atom, [basic, extended, full]}},
@@ -329,13 +333,13 @@ arguments() ->
                 help => "run concurrency estimation test"},
             #{name => min, long => "-min",
                 help => "start with this amount of processes (1)",
-                type => {int, [{min, 1}]}},
+                type => {integer, [{min, 1}]}},
             #{name => max, long => "-max",
                 help => "do not exceed this number of processes",
-                type => {int, [{max, erlang:system_info(process_limit) - 1000}]}},
+                type => {integer, [{max, erlang:system_info(process_limit) - 1000}]}},
             #{name => threshold, short => $t, long => "-threshold",
                 help => "cv at least <threshold> samples should be less than <cv> to increase concurrency", default => 3,
-                type => {int, [{min, 1}]}},
+                type => {integer, [{min, 1}]}},
             #{name => init, long => "-init",
                 help => "init code, see erlperf_job documentation for details", nargs => 1, action => append},
             #{name => done, long => "-done",

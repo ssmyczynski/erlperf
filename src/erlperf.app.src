@@ -9,8 +9,7 @@
   {applications,
    [kernel,
     stdlib,
-    compiler,
-    argparse
+    compiler
    ]},
   {env,[]},
   {modules, []},
